@@ -25,14 +25,14 @@ const std::vector<std::string>& audioQualities() {
     return v;
 }
 
-// Formatos que youtube-dl sabe generar con --merge-output-format / --recode-video.
+// Formatos que youtube-dl sabe generar con --merge-output-format / --recode-video (más "original").
 const std::vector<std::string>& videoFormats() {
-    static const std::vector<std::string> v = {"mp4", "mkv", "webm", "avi", "flv"};
+    static const std::vector<std::string> v = {"original", "mp4", "mkv", "webm", "avi", "flv"};
     return v;
 }
 
 const std::vector<std::string>& audioFormats() {
-    static const std::vector<std::string> v = {"mp3", "m4a", "aac", "opus", "ogg", "flac", "wav"};
+    static const std::vector<std::string> v = {"original", "mp3", "m4a", "aac", "opus", "ogg", "flac", "wav"};
     return v;
 }
 
@@ -87,7 +87,8 @@ std::vector<std::string> buildYtdlArgs(const DownloadOptions& o, const std::stri
                 if (!haveFfmpeg) {
                     // Sin ffmpeg solo podemos bajar formatos "progresivos" (audio+vídeo en un fichero),
                     // que en YouTube suelen limitarse a 360p.
-                    sel = "best" + h + "[ext=" + o.format + "]/best" + h + "/best";
+                    sel = (o.format == "original") ? ("best" + h + "/best")
+                                                   : ("best" + h + "[ext=" + o.format + "]/best" + h + "/best");
                 } else if (o.format == "mp4") {
                     // Preferimos H.264 + AAC para máxima compatibilidad con mp4.
                     sel = "bestvideo" + h + "[ext=mp4]+bestaudio[ext=m4a]/bestvideo" + h + "+bestaudio/best" + h +
@@ -104,29 +105,37 @@ std::vector<std::string> buildYtdlArgs(const DownloadOptions& o, const std::stri
         a.push_back(sel);
 
         if (haveFfmpeg) {
-            static const std::vector<std::string> mergeable = {"mkv", "mp4", "webm", "flv"};
-            a.push_back("--merge-output-format");
-            a.push_back(contains(mergeable, o.format) ? o.format : "mkv");
-            // youtube-dl no recodifica si el fichero ya está en el formato pedido,
-            // así que esto solo actúa cuando hace falta (p.ej. avi o un fallback).
-            a.push_back("--recode-video");
-            a.push_back(o.format);
+            if (o.format != "original") {
+                static const std::vector<std::string> mergeable = {"mkv", "mp4", "webm", "flv"};
+                a.push_back("--merge-output-format");
+                a.push_back(contains(mergeable, o.format) ? o.format : "mkv");
+                // youtube-dl no recodifica si el fichero ya está en el formato pedido,
+                // así que esto solo actúa cuando hace falta (p.ej. avi o un fallback).
+                a.push_back("--recode-video");
+                a.push_back(o.format);
+            }
             if (o.addMetadata) a.push_back("--add-metadata");
         } else {
-            warnings.push_back("Sin ffmpeg: la calidad queda limitada a los formatos con audio y vídeo juntos "
-                               "(normalmente 360p) y no se convertirá a '" + o.format + "'.");
+            warnings.push_back(o.format == "original"
+                                   ? "Sin ffmpeg: la calidad queda limitada a los formatos con audio y vídeo juntos "
+                                     "(normalmente 360p)."
+                                   : "Sin ffmpeg: la calidad queda limitada a los formatos con audio y vídeo juntos "
+                                     "(normalmente 360p) y no se convertirá a '" +
+                                         o.format + "'.");
         }
     } else {  // Audio
         a.push_back("-f");
         if (!o.formatCode.empty()) {
             a.push_back(o.formatCode);
-        } else if (haveFfmpeg) {
+        } else if (haveFfmpeg || o.format == "original") {
             a.push_back("bestaudio/best");
         } else {
             a.push_back("bestaudio[ext=m4a]/bestaudio/best");
         }
 
-        if (haveFfmpeg) {
+        if (o.format == "original") {
+            if (haveFfmpeg && o.addMetadata) a.push_back("--add-metadata");
+        } else if (haveFfmpeg) {
             a.push_back("--extract-audio");
             a.push_back("--audio-format");
             a.push_back(o.format == "ogg" ? "vorbis" : o.format);

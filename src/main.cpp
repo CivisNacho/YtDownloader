@@ -44,8 +44,8 @@ Opciones:
   -a, --audio            Descargar solo audio
   -q, --quality Q        Vídeo: best | worst | 2160 | 1440 | 1080 | 720 | 480 | 360 | 240 | 144
                          Audio: best | 320 | 256 | 192 | 160 | 128 | 96 | 64  (kbps)
-  -f, --format F         Vídeo: mp4 | mkv | webm | avi | flv              (por defecto mp4)
-                         Audio: mp3 | m4a | aac | opus | ogg | flac | wav (por defecto mp3)
+  -f, --format F         Vídeo: original | mp4 | mkv | webm | avi | flv              (por defecto mp4)
+                         Audio: original | mp3 | m4a | aac | opus | ogg | flac | wav (por defecto mp3)
   -o, --output DIR       Carpeta de destino (por defecto la actual)
   -t, --template T       Plantilla de nombre de youtube-dl (por defecto "%(title)s.%(ext)s")
   -p, --playlist         Descargar la lista de reproducción completa si la URL la incluye
